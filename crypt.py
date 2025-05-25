@@ -2,30 +2,27 @@ import hashlib
 from Crypto import Random
 from Crypto.Cipher import AES
 
-'''
-Thanks to
-http://stackoverflow.com/questions/12524994/encrypt-decrypt-using-pycrypto-aes-256
-'''
 class AESCipher:
+    def __init__(self, key):
+        self.bs = 32  # Block size in bytes (256-bit)
+        self.key = hashlib.sha256(key.encode('utf-8')).digest()
 
-    def __init__(self, key): 
-        self.bs = 32	# Block size
-        self.key = hashlib.sha256(key.encode()).digest()	# 32 bit digest
-
-    def encrypt(self, raw):
+    def encrypt(self, raw: bytes) -> bytes:
         raw = self._pad(raw)
-        iv = Random.new().read(AES.block_size)
+        iv = Random.get_random_bytes(AES.block_size)
         cipher = AES.new(self.key, AES.MODE_CBC, iv)
         return iv + cipher.encrypt(raw)
 
-    def decrypt(self, enc):
+    def decrypt(self, enc: bytes) -> bytes:
         iv = enc[:AES.block_size]
         cipher = AES.new(self.key, AES.MODE_CBC, iv)
         return self._unpad(cipher.decrypt(enc[AES.block_size:]))
 
-    def _pad(self, s):
-        return s + (self.bs - len(s) % self.bs) * chr(self.bs - len(s) % self.bs)
+    def _pad(self, data: bytes) -> bytes:
+        pad_len = self.bs - len(data) % self.bs
+        padding = bytes([pad_len]) * pad_len
+        return data + padding
 
-    @staticmethod
-    def _unpad(s):
-        return s[:-ord(s[len(s)-1:])]
+    def _unpad(self, data: bytes) -> bytes:
+        pad_len = data[-1]
+        return data[:-pad_len]
